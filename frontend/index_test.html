@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>URL Shortener</title>
+</head>
+<body>
+  <script src="config.js"></script>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (code) {
+      document.write("Got code: " + code);
+    } else {
+      const url = `https://${CONFIG.COGNITO_DOMAIN}/login?response_type=code&client_id=${CONFIG.COGNITO_CLIENT_ID}&redirect_uri=${encodeURIComponent(CONFIG.REDIRECT_URI)}&scope=openid+email+profile`;
+      window.location.href = url;
+    }
+  </script>
+</body>
+</html>
