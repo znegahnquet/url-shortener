@@ -1,330 +1,403 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Snip — URL Shortener</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<script src="config.js"></script>
-<style>
-  :root {
-    --bg: #0a0a0b; --surface: #141416; --border: #252528;
-    --accent: #b5ff4d; --accent2: #4dffb5; --text: #f0f0f0;
-    --muted: #888; --danger: #ff5f5f; --radius: 8px;
-    --mono: 'DM Mono', monospace; --sans: 'Syne', sans-serif;
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; display: flex; flex-direction: column; }
-  nav { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 2rem; border-bottom: 1px solid var(--border); }
-  .logo { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.04em; color: var(--accent); }
-  .logo span { color: var(--text); }
-  #auth-status { display: flex; align-items: center; gap: 1rem; font-size: 0.8rem; color: var(--muted); font-family: var(--mono); }
-  #user-email { color: var(--accent2); }
-  .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.2rem; border-radius: var(--radius); font-family: var(--sans); font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.15s ease; border: none; }
-  .btn-primary { background: var(--accent); color: #0a0a0b; }
-  .btn-primary:hover { background: #cbff73; transform: translateY(-1px); }
-  .btn-ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
-  .btn-ghost:hover { border-color: var(--muted); }
-  .btn-danger { background: transparent; color: var(--danger); border: 1px solid transparent; padding: 0.3rem 0.6rem; font-size: 0.75rem; }
-  .btn-danger:hover { border-color: var(--danger); background: rgba(255,95,95,0.08); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
-  main { flex: 1; max-width: 760px; width: 100%; margin: 0 auto; padding: 3rem 1.5rem; }
-  #hero { text-align: center; padding: 4rem 0 2rem; }
-  #hero h1 { font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 800; letter-spacing: -0.04em; line-height: 1.05; margin-bottom: 1rem; }
-  #hero h1 em { font-style: normal; color: var(--accent); }
-  #hero p { color: var(--muted); font-size: 1rem; margin-bottom: 2.5rem; }
-  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; }
-  .panel-title { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 1.2rem; }
-  .input-row { display: flex; gap: 0.75rem; }
-  .input-row input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-family: var(--mono); font-size: 0.85rem; padding: 0.7rem 1rem; outline: none; transition: border-color 0.15s; }
-  .input-row input:focus { border-color: var(--accent); }
-  .input-row input::placeholder { color: var(--muted); }
-  #result-box { margin-top: 1rem; background: rgba(181,255,77,0.06); border: 1px solid rgba(181,255,77,0.3); border-radius: var(--radius); padding: 0.8rem 1rem; display: none; align-items: center; justify-content: space-between; gap: 1rem; }
-  #result-box.visible { display: flex; }
-  #short-url-display { font-family: var(--mono); font-size: 0.9rem; color: var(--accent); word-break: break-all; }
-  #links-list { display: flex; flex-direction: column; gap: 0.75rem; }
-  .link-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.9rem 1rem; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 0.5rem; animation: fadeSlide 0.25s ease both; }
-  @keyframes fadeSlide { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-  .link-short { font-family: var(--mono); font-size: 0.9rem; color: var(--accent); text-decoration: none; }
-  .link-short:hover { text-decoration: underline; }
-  .link-long { font-size: 0.75rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px; }
-  .link-meta { display: flex; align-items: center; gap: 1rem; }
-  .click-badge { font-family: var(--mono); font-size: 0.72rem; padding: 0.25rem 0.5rem; border-radius: 4px; background: rgba(77,255,181,0.1); color: var(--accent2); white-space: nowrap; }
-  .empty-state { text-align: center; padding: 2.5rem; color: var(--muted); font-size: 0.85rem; }
-  #toast { position: fixed; bottom: 2rem; right: 2rem; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.75rem 1.25rem; font-size: 0.82rem; font-family: var(--mono); z-index: 100; opacity: 0; transform: translateY(8px); transition: all 0.2s ease; pointer-events: none; }
-  #toast.show { opacity: 1; transform: translateY(0); }
-  #toast.success { border-color: var(--accent); color: var(--accent); }
-  #toast.error { border-color: var(--danger); color: var(--danger); }
-  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(10,10,11,0.3); border-top-color: #0a0a0b; border-radius: 50%; animation: spin 0.6s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  #loading { display: flex; align-items: center; justify-content: center; padding: 3rem; }
-  .loading-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); animation: pulse 1s ease infinite; margin: 0 4px; }
-  .loading-dot:nth-child(2) { animation-delay: 0.15s; }
-  .loading-dot:nth-child(3) { animation-delay: 0.3s; }
-  @keyframes pulse { 0%, 100% { opacity: 0.2; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1); } }
-  #auth-gate { text-align: center; padding: 2rem; }
-  #auth-gate p { color: var(--muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
-  .hidden { display: none !important; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>URL Shortener</title>
+  <script src="config.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 650px;
+      margin: 60px auto;
+      padding: 0 20px;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 4px;
+    }
+
+    p.subtitle {
+      color: #666;
+      margin-bottom: 30px;
+      font-size: 15px;
+    }
+
+    .card {
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .card h2 {
+      font-size: 16px;
+      margin: 0 0 16px 0;
+      color: #444;
+    }
+
+    input[type="url"], input[type="text"], input[type="password"], input[type="email"] {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      font-size: 14px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover { background: #1d4ed8; }
+    button:disabled { background: #93c5fd; cursor: not-allowed; }
+
+    button.secondary {
+      background: white;
+      color: #2563eb;
+      border: 1px solid #2563eb;
+    }
+    button.secondary:hover { background: #eff6ff; }
+
+    button.danger {
+      background: white;
+      color: #dc2626;
+      border: 1px solid #dc2626;
+      padding: 6px 12px;
+      font-size: 13px;
+    }
+    button.danger:hover { background: #fef2f2; }
+
+    #result-box {
+      display: none;
+      margin-top: 14px;
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 14px;
+    }
+
+    #result-box a {
+      color: #16a34a;
+      font-weight: bold;
+      word-break: break-all;
+    }
+
+    .link-item {
+      border-bottom: 1px solid #eee;
+      padding: 12px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .link-item:last-child { border-bottom: none; }
+
+    .link-info a {
+      font-size: 15px;
+      color: #2563eb;
+      font-weight: bold;
+      text-decoration: none;
+    }
+
+    .link-info a:hover { text-decoration: underline; }
+
+    .link-info .long-url {
+      font-size: 12px;
+      color: #888;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 380px;
+    }
+
+    .click-count {
+      font-size: 12px;
+      color: #666;
+      white-space: nowrap;
+    }
+
+    #nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    #user-info {
+      font-size: 13px;
+      color: #666;
+    }
+
+    #user-info span {
+      color: #2563eb;
+      font-weight: bold;
+    }
+
+    .msg { font-size: 13px; color: #888; padding: 12px 0; }
+    .hidden { display: none; }
+  </style>
 </head>
 <body>
-<nav>
-  <div class="logo">snip<span>.</span></div>
-  <div id="auth-status">
-    <span id="user-email" class="hidden"></span>
-    <button id="btn-logout" class="btn btn-ghost hidden">Sign out</button>
-    <button id="btn-login" class="btn btn-primary">Sign in</button>
+
+<div id="nav">
+  <h1>URL Shortener</h1>
+  <div id="user-info" class="hidden">
+    Signed in as <span id="user-email"></span>
+    &nbsp;
+    <button class="secondary" onclick="signOut()" style="padding:6px 12px;font-size:13px">Sign out</button>
   </div>
-</nav>
-<main>
-  <section id="hero">
-    <h1>Shorten.<br/><em>Track.</em> Share.</h1>
-    <p>Paste a long URL, get a clean short link.<br/>See every click in real time.</p>
-    <div id="auth-gate">
-      <p>Sign in to create and manage your short links.</p>
-      <button class="btn btn-primary" onclick="signIn()">Get started →</button>
-    </div>
-  </section>
-  <div id="app" class="hidden">
-    <div class="panel">
-      <div class="panel-title">Create short link</div>
-      <div class="input-row">
-        <input type="url" id="long-url-input" placeholder="https://your-very-long-url.com/goes/here" />
-        <button class="btn btn-primary" id="btn-shorten" onclick="shortenUrl()">Shorten</button>
-      </div>
-      <div id="result-box">
-        <span id="short-url-display"></span>
-        <button class="btn btn-ghost" style="font-size:0.78rem;padding:0.4rem 0.8rem" onclick="copyShortUrl()">Copy</button>
-      </div>
-    </div>
-    <div class="panel">
-      <div class="panel-title" style="display:flex;justify-content:space-between;align-items:center">
-        <span>My links</span>
-        <button class="btn btn-ghost" style="font-size:0.75rem;padding:0.3rem 0.7rem" onclick="loadLinks()">↻ Refresh</button>
-      </div>
-      <div id="loading" class="hidden">
-        <div class="loading-dot"></div>
-        <div class="loading-dot"></div>
-        <div class="loading-dot"></div>
-      </div>
-      <div id="links-list"></div>
+</div>
+
+<p class="subtitle">Shorten long URLs and track how many times they get clicked.</p>
+
+<!-- Auth gate -->
+<div id="auth-gate">
+  <div class="card">
+    <h2>Sign in to get started</h2>
+    <button onclick="signIn()">Sign in / Sign up</button>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app" class="hidden">
+
+  <!-- Create link -->
+  <div class="card">
+    <h2>Create a short link</h2>
+    <input type="url" id="long-url-input" placeholder="https://example.com/your-long-url" />
+    <button id="btn-shorten" onclick="shortenUrl()">Shorten</button>
+    <div id="result-box">
+      Short link: <a id="short-url-display" href="#" target="_blank"></a>
+      &nbsp;
+      <button class="secondary" onclick="copyLink()" style="padding:5px 10px;font-size:13px">Copy</button>
     </div>
   </div>
-</main>
-<div id="toast"></div>
+
+  <!-- My links -->
+  <div class="card">
+    <h2 style="display:flex;justify-content:space-between;align-items:center">
+      My links
+      <button class="secondary" onclick="loadLinks()" style="padding:5px 12px;font-size:13px">Refresh</button>
+    </h2>
+    <div id="links-list"><p class="msg">Loading...</p></div>
+  </div>
+
+</div>
+
 <script>
-const API = CONFIG.API_BASE_URL;
-const CLIENT = CONFIG.COGNITO_CLIENT_ID;
-const DOMAIN = CONFIG.COGNITO_DOMAIN;
-const REDIRECT = CONFIG.REDIRECT_URI;
-let idToken = null;
-let userEmail = null;
-let _lastShortUrl = null;
+  const API    = CONFIG.API_BASE_URL;
+  const CLIENT = CONFIG.COGNITO_CLIENT_ID;
+  const DOMAIN = CONFIG.COGNITO_DOMAIN;
+  const REDIRECT = CONFIG.REDIRECT_URI;
 
-function signIn() {
-  const params = new URLSearchParams({
-    response_type: "code",
-    client_id: CLIENT,
-    redirect_uri: REDIRECT,
-    scope: "openid email profile",
-  });
-  window.location.href = `https://${DOMAIN}/login?${params}`;
-}
+  let idToken = null;
+  let userEmail = null;
+  let lastShortUrl = null;
 
-function signOut() {
-  idToken = null;
-  userEmail = null;
-  localStorage.removeItem("snip_tokens");
-  const params = new URLSearchParams({ client_id: CLIENT, logout_uri: REDIRECT });
-  window.location.href = `https://${DOMAIN}/logout?${params}`;
-}
-
-async function exchangeCodeForTokens(code) {
-  const body = new URLSearchParams({
-    grant_type: "authorization_code",
-    client_id: CLIENT,
-    redirect_uri: REDIRECT,
-    code,
-  });
-  const res = await fetch(`https://${DOMAIN}/oauth2/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-  if (!res.ok) throw new Error("Token exchange failed");
-  return res.json();
-}
-
-async function refreshTokens(refreshToken) {
-  const body = new URLSearchParams({
-    grant_type: "refresh_token",
-    client_id: CLIENT,
-    refresh_token: refreshToken,
-  });
-  const res = await fetch(`https://${DOMAIN}/oauth2/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-  if (!res.ok) return null;
-  return res.json();
-}
-
-function parseJwtPayload(token) {
-  try {
-    return JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-  } catch { return null; }
-}
-
-async function initAuth() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get("code");
-  if (code) {
-    try {
-      const tokens = await exchangeCodeForTokens(code);
-      localStorage.setItem("snip_tokens", JSON.stringify(tokens));
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } catch (e) { console.error("Auth error:", e); }
-  }
-  const stored = localStorage.getItem("snip_tokens");
-  if (!stored) return showLoggedOut();
-  let tokens = JSON.parse(stored);
-  const payload = parseJwtPayload(tokens.id_token);
-  if (!payload) return showLoggedOut();
-  const now = Math.floor(Date.now() / 1000);
-  if (payload.exp < now) {
-    if (!tokens.refresh_token) return showLoggedOut();
-    const refreshed = await refreshTokens(tokens.refresh_token);
-    if (!refreshed) return showLoggedOut();
-    tokens = { ...tokens, ...refreshed };
-    localStorage.setItem("snip_tokens", JSON.stringify(tokens));
-  }
-  idToken = tokens.id_token;
-  userEmail = parseJwtPayload(idToken)?.email || "";
-  showLoggedIn();
-}
-
-function showLoggedIn() {
-  document.getElementById("btn-login").classList.add("hidden");
-  document.getElementById("btn-logout").classList.remove("hidden");
-  document.getElementById("user-email").textContent = userEmail;
-  document.getElementById("user-email").classList.remove("hidden");
-  document.getElementById("auth-gate").classList.add("hidden");
-  document.getElementById("app").classList.remove("hidden");
-  loadLinks();
-}
-
-function showLoggedOut() {
-  document.getElementById("btn-login").classList.remove("hidden");
-  document.getElementById("btn-logout").classList.add("hidden");
-  document.getElementById("user-email").classList.add("hidden");
-  document.getElementById("app").classList.add("hidden");
-}
-
-document.getElementById("btn-logout").addEventListener("click", signOut);
-
-async function apiFetch(path, options = {}) {
-  const headers = { "Content-Type": "application/json", "Authorization": idToken, ...(options.headers || {}) };
-  const res = await fetch(`${API}${path}`, { ...options, headers });
-  if (res.status === 401) { showLoggedOut(); throw new Error("Unauthorized"); }
-  return res;
-}
-
-async function shortenUrl() {
-  const input = document.getElementById("long-url-input");
-  const btn = document.getElementById("btn-shorten");
-  const longUrl = input.value.trim();
-  if (!longUrl) { showToast("Please enter a URL", "error"); return; }
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Shortening…';
-  try {
-    const res = await apiFetch("/links", { method: "POST", body: JSON.stringify({ long_url: longUrl }) });
-    const data = await res.json();
-    if (!res.ok) { showToast(data.error || "Something went wrong", "error"); return; }
-    _lastShortUrl = data.short_url;
-    const box = document.getElementById("result-box");
-    document.getElementById("short-url-display").textContent = data.short_url;
-    box.classList.add("visible");
-    input.value = "";
-    showToast("Short link created!", "success");
-    loadLinks();
-  } catch (e) { showToast("Request failed", "error"); }
-  finally { btn.disabled = false; btn.innerHTML = "Shorten"; }
-}
-
-function copyShortUrl() {
-  if (!_lastShortUrl) return;
-  navigator.clipboard.writeText(_lastShortUrl).then(() => showToast("Copied!", "success"));
-}
-
-async function loadLinks() {
-  const container = document.getElementById("links-list");
-  const loading = document.getElementById("loading");
-  container.innerHTML = "";
-  loading.classList.remove("hidden");
-  try {
-    const res = await apiFetch("/links");
-    const data = await res.json();
-    loading.classList.add("hidden");
-    const links = (data.links || []).sort((a, b) => b.created_at - a.created_at);
-    if (links.length === 0) {
-      container.innerHTML = '<div class="empty-state">No links yet. Create your first one above ↑</div>';
-      return;
-    }
-    links.forEach(link => {
-      const card = document.createElement("div");
-      card.className = "link-card";
-      card.id = `card-${link.code}`;
-      const shortUrl = `${API}/r/${link.code}`;
-      card.innerHTML = `
-        <div>
-          <a class="link-short" href="${shortUrl}" target="_blank">/${link.code}</a>
-          <div class="link-long" title="${link.long_url}">${link.long_url}</div>
-        </div>
-        <div class="link-meta">
-          <span class="click-badge">${link.click_count} click${link.click_count !== 1 ? "s" : ""}</span>
-          <button class="btn btn-danger" onclick="deleteLink('${link.code}', this)">✕</button>
-        </div>`;
-      container.appendChild(card);
+  function signIn() {
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: CLIENT,
+      redirect_uri: REDIRECT,
+      scope: "openid email profile",
     });
-  } catch (e) {
-    loading.classList.add("hidden");
-    container.innerHTML = '<div class="empty-state" style="color:var(--danger)">Failed to load links</div>';
+    window.location.href = `https://${DOMAIN}/login?${params}`;
   }
-}
 
-async function deleteLink(code, btn) {
-  btn.disabled = true; btn.textContent = "…";
-  try {
-    const res = await apiFetch(`/links/${code}`, { method: "DELETE" });
-    if (res.ok) {
-      const card = document.getElementById(`card-${code}`);
-      card.style.transition = "opacity 0.25s, transform 0.25s";
-      card.style.opacity = "0"; card.style.transform = "translateX(20px)";
-      setTimeout(() => card.remove(), 250);
-      showToast("Link deleted", "success");
-    } else {
-      const data = await res.json();
-      showToast(data.error || "Delete failed", "error");
-      btn.disabled = false; btn.textContent = "✕";
+  function signOut() {
+    idToken = null;
+    userEmail = null;
+    localStorage.removeItem("tokens");
+    const params = new URLSearchParams({ client_id: CLIENT, logout_uri: REDIRECT });
+    window.location.href = `https://${DOMAIN}/logout?${params}`;
+  }
+
+  async function exchangeCode(code) {
+    const body = new URLSearchParams({
+      grant_type: "authorization_code",
+      client_id: CLIENT,
+      redirect_uri: REDIRECT,
+      code,
+    });
+    const res = await fetch(`https://${DOMAIN}/oauth2/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+    if (!res.ok) throw new Error("Token exchange failed");
+    return res.json();
+  }
+
+  function parseJwt(token) {
+    try {
+      return JSON.parse(atob(token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+    } catch { return null; }
+  }
+
+  async function init() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (code) {
+      try {
+        const tokens = await exchangeCode(code);
+        localStorage.setItem("tokens", JSON.stringify(tokens));
+        window.history.replaceState({}, "", window.location.pathname);
+      } catch(e) { console.error(e); }
     }
-  } catch { showToast("Request failed", "error"); btn.disabled = false; btn.textContent = "✕"; }
-}
 
-let toastTimer;
-function showToast(msg, type = "success") {
-  const el = document.getElementById("toast");
-  el.textContent = msg; el.className = `show ${type}`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = ""; }, 3000);
-}
+    const stored = localStorage.getItem("tokens");
+    if (!stored) return showLoggedOut();
 
-document.getElementById("long-url-input").addEventListener("keydown", e => {
-  if (e.key === "Enter") shortenUrl();
-});
+    const tokens = JSON.parse(stored);
+    const payload = parseJwt(tokens.id_token);
+    if (!payload) return showLoggedOut();
 
-initAuth();
+    const now = Math.floor(Date.now() / 1000);
+    if (payload.exp < now) return showLoggedOut();
+
+    idToken = tokens.id_token;
+    userEmail = payload.email || "";
+    showLoggedIn();
+  }
+
+  function showLoggedIn() {
+    document.getElementById("auth-gate").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    document.getElementById("user-info").classList.remove("hidden");
+    document.getElementById("user-email").textContent = userEmail;
+    loadLinks();
+  }
+
+  function showLoggedOut() {
+    document.getElementById("auth-gate").classList.remove("hidden");
+    document.getElementById("app").classList.add("hidden");
+    document.getElementById("user-info").classList.add("hidden");
+  }
+
+  async function apiFetch(path, options = {}) {
+    const headers = {
+      "Content-Type": "application/json",
+      "Authorization": idToken,
+      ...(options.headers || {}),
+    };
+    return fetch(`${API}${path}`, { ...options, headers });
+  }
+
+  async function shortenUrl() {
+    const input = document.getElementById("long-url-input");
+    const btn   = document.getElementById("btn-shorten");
+    const longUrl = input.value.trim();
+    if (!longUrl) { alert("Please enter a URL"); return; }
+
+    btn.disabled = true;
+    btn.textContent = "Shortening...";
+
+    try {
+      const res  = await apiFetch("/links", { method: "POST", body: JSON.stringify({ long_url: longUrl }) });
+      const data = await res.json();
+
+      if (!res.ok) { alert(data.error || "Something went wrong"); return; }
+
+      lastShortUrl = data.short_url;
+      const box = document.getElementById("result-box");
+      const link = document.getElementById("short-url-display");
+      link.href = data.short_url;
+      link.textContent = data.short_url;
+      box.style.display = "block";
+      input.value = "";
+      loadLinks();
+    } catch(e) {
+      alert("Request failed");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Shorten";
+    }
+  }
+
+  function copyLink() {
+    if (!lastShortUrl) return;
+    navigator.clipboard.writeText(lastShortUrl).then(() => alert("Copied!"));
+  }
+
+  async function loadLinks() {
+    const container = document.getElementById("links-list");
+    container.innerHTML = "<p class='msg'>Loading...</p>";
+
+    try {
+      const res  = await apiFetch("/links");
+      const data = await res.json();
+      const links = (data.links || []).sort((a, b) => b.created_at - a.created_at);
+
+      if (links.length === 0) {
+        container.innerHTML = "<p class='msg'>No links yet. Create one above!</p>";
+        return;
+      }
+
+      container.innerHTML = "";
+      links.forEach(link => {
+        const shortUrl = `${API}/r/${link.code}`;
+        const item = document.createElement("div");
+        item.className = "link-item";
+        item.id = `link-${link.code}`;
+        item.innerHTML = `
+          <div class="link-info">
+            <a href="${shortUrl}" target="_blank">/${link.code}</a>
+            <div class="long-url">${link.long_url}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="click-count">${link.click_count} click${link.click_count !== 1 ? "s" : ""}</span>
+            <button class="danger" onclick="deleteLink('${link.code}', this)">Delete</button>
+          </div>`;
+        container.appendChild(item);
+      });
+    } catch(e) {
+      container.innerHTML = "<p class='msg' style='color:red'>Failed to load links.</p>";
+    }
+  }
+
+  async function deleteLink(code, btn) {
+    btn.disabled = true;
+    btn.textContent = "...";
+    try {
+      const res = await apiFetch(`/links/${code}`, { method: "DELETE" });
+      if (res.ok) {
+        document.getElementById(`link-${code}`).remove();
+        const container = document.getElementById("links-list");
+        if (container.children.length === 0) {
+          container.innerHTML = "<p class='msg'>No links yet. Create one above!</p>";
+        }
+      } else {
+        alert("Could not delete link");
+        btn.disabled = false;
+        btn.textContent = "Delete";
+      }
+    } catch {
+      alert("Request failed");
+      btn.disabled = false;
+      btn.textContent = "Delete";
+    }
+  }
+
+  document.getElementById("long-url-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") shortenUrl();
+  });
+
+  init();
 </script>
 </body>
 </html>
