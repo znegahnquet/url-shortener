@@ -4,5 +4,5 @@ const CONFIG = {
   COGNITO_USER_POOL_ID: "us-east-1_ddJlsfITJ",
   COGNITO_CLIENT_ID: "6r2if36n59250dkj3ofh22nsha",
   COGNITO_DOMAIN: "us-east-1ddjlsfltj.auth.us-east-1.amazoncognito.com",
-  REDIRECT_URI: "http://localhost:3000",
+  REDIRECT_URI: "https://d2xe1ou0ltqraq.cloudfront.net",
 };
